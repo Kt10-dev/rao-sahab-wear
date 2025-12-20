@@ -6,98 +6,20 @@ const generateToken = require("../utils/generateToken");
 const transporter = require("../config/email");
 const crypto = require("crypto");
 
-const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    res.status(404);
-    throw new Error("User not found with this email.");
-  }
-
-  // Get Reset Token
-  const resetToken = user.getResetPasswordToken();
-
-  await user.save({ validateBeforeSave: false }); // Sirf token save karein
-
-  // Create Reset URL (Frontend URL)
-  // ⚠️ Note: Localhost:3000 ya aapka frontend domain
-  const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
-
-  const message = `
-    <h1>Password Reset Request</h1>
-    <p>You requested a password reset. Please click the link below to reset your password:</p>
-    <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
-    <p>If you did not make this request, please ignore this email.</p>
-  `;
-
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_SERVICE_USER,
-      to: user.email,
-      subject: "Rao Sahab Wear: Password Reset",
-      html: message,
-    });
-
-    res.json({ success: true, data: "Email sent" });
-  } catch (error) {
-    console.error(error);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    res.status(500);
-    throw new Error("Email could not be sent");
-  }
-});
-
-// @desc    Reset Password
-// @route   PUT /api/users/reset-password/:resetToken
-// @access  Public
-const resetPassword = asyncHandler(async (req, res) => {
-  // Get hashed token
-  const resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(req.params.resetToken)
-    .digest("hex");
-
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() }, // Check expiry
-  });
-
-  if (!user) {
-    res.status(400);
-    throw new Error("Invalid or Expired Token");
-  }
-
-  // Set new password
-  user.password = req.body.password;
-
-  // Clear reset fields
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
-  // Save (Middleware will hash the new password automatically)
-  await user.save();
-
-  res.json({
-    success: true,
-    token: generateToken(user._id), // Optionally log them in directly
-    message: "Password Updated Successfullly",
-  });
-});
-// Helper function to generate 6-digit OTP
+// ---------------------------------------------------------
+// 🛠️ HELPER: OTP Generator (6-digit)
+// ---------------------------------------------------------
 const generateOtp = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-// @desc    Send OTP for user registration
-// @route   POST /api/users/send-otp
-// @access  Public
+// ---------------------------------------------------------
+// 🟢 1. SEND OTP (Registration Step 1)
+// ---------------------------------------------------------
 const sendOtp = asyncHandler(async (req, res) => {
   const { name, email, password, role = "user" } = req.body;
 
+  // Check if user already exists and is verified
   const userExists = await User.findOne({ email, isVerified: true });
   if (userExists) {
     res.status(400);
@@ -105,20 +27,19 @@ const sendOtp = asyncHandler(async (req, res) => {
   }
 
   const otp = generateOtp();
-  const otpExpires = Date.now() + 10 * 60 * 1000;
+  const otpExpires = Date.now() + 10 * 60 * 1000; // 10 Min Expiry
 
   let user = await User.findOne({ email });
 
-  // 🟢 FIX 1: Ensure password is set/updated ONLY if user exists
   if (user) {
-    // User already exists (unverified), just update temp fields and password
+    // Unverified user exists, update details
     user.name = name;
-    user.password = password; // pre('save') hook will hash this new password
+    user.password = password; // Pre-save hook will hash this
     user.otp = otp;
     user.otpExpires = otpExpires;
     await user.save();
   } else {
-    // New user, create them (password hashes on creation)
+    // Create new unverified user
     user = await User.create({
       name,
       email,
@@ -130,32 +51,52 @@ const sendOtp = asyncHandler(async (req, res) => {
     });
   }
 
-  // --- Email Sending Logic ---
+  // --- Email Sending with Timeout Protection ---
   const mailOptions = {
-    from: process.env.EMAIL_SERVICE_USER,
+    from: `"Rao Sahab Wear" <${process.env.EMAIL_SERVICE_USER}>`,
     to: email,
     subject: "Rao Sahab Wear: OTP Verification",
-    html: `<h2>Email Verification Code</h2><p>Your 6-digit verification code is:</p><h1 style="color: #ff0055; font-size: 24px; letter-spacing: 5px;">${otp}</h1><p>This code is valid for 10 minutes.</p>`,
+    html: `
+      <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px;">
+        <h2 style="color: #333;">Email Verification</h2>
+        <p>Your 6-digit verification code is:</p>
+        <h1 style="color: #0BC5EA; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+        <p>This code is valid for 10 minutes.</p>
+        <p>If you didn't request this, ignore this email.</p>
+      </div>
+    `,
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    res.json({ message: "OTP sent successfully to your email." });
-  } catch (error) {
-    console.error("Email sending error:", error);
-    // OTP data DB में सेव हो चुका है, इसलिए यूजर को आगे बढ़ने दें, लेकिन एरर लॉग करें
+    // 💡 Render Timeout Hack: Wait max 12 seconds for email
+    const sendMailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP Timeout")), 12000)
+    );
+
+    await Promise.race([sendMailPromise, timeoutPromise]);
+
     res.json({
-      message: "OTP sent successfully, but check server log for email error.",
+      success: true,
+      message: "OTP sent successfully to your email.",
+    });
+  } catch (error) {
+    console.error("❌ Email Error catch block:", error.message);
+    // 💡 Rao Sahab Hack: We send success even if email times out
+    // because OTP is already saved in DB. User can try again or check spam.
+    res.status(200).json({
+      success: true,
+      message: "Processing... Please check your inbox or spam in a moment.",
+      error: "Email delivery delayed",
     });
   }
 });
 
-// @desc    Verify OTP and finalize registration
-// @route   POST /api/users/verify-otp
-// @access  Public
+// ---------------------------------------------------------
+// 🟢 2. VERIFY OTP (Registration Step 2)
+// ---------------------------------------------------------
 const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
-
   const user = await User.findOne({ email });
 
   if (!user || user.isVerified) {
@@ -163,40 +104,32 @@ const verifyOtp = asyncHandler(async (req, res) => {
     throw new Error("Verification failed. User not found or already verified.");
   }
 
-  // 1. OTP and expiry check
   if (user.otp !== otp || user.otpExpires < Date.now()) {
     res.status(401);
     throw new Error("Invalid or expired OTP.");
   }
 
-  // 2. Finalize registration (Only modify isVerified status)
   user.isVerified = true;
   user.otp = undefined;
   user.otpExpires = undefined;
-
-  // 🟢 FIX 2: Password field is NOT modified here, so hashing is bypassed.
   await user.save();
 
-  // 3. Send response with JWT Token
   res.status(201).json({
     _id: user._id,
     name: user.name,
     email: user.email,
     role: user.role,
-    isVerified: true,
     token: generateToken(user._id),
   });
 });
 
-// @desc    Auth user & get token (Login)
-// @route   POST /api/users/login
-// @access  Public
+// ---------------------------------------------------------
+// 🟢 3. AUTH USER (Login)
+// ---------------------------------------------------------
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
   const user = await User.findOne({ email });
 
-  // 1. Check if user exists and password matches
   if (user && (await user.matchPassword(password))) {
     if (!user.isVerified) {
       res.status(401);
@@ -211,17 +144,80 @@ const authUser = asyncHandler(async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    // This is the line throwing the error if password mismatch occurs.
     res.status(401);
     throw new Error("Invalid email or password");
   }
 });
 
+// ---------------------------------------------------------
+// 🟢 4. FORGOT & RESET PASSWORD
+// ---------------------------------------------------------
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found with this email.");
+  }
+
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  // LIVE URL handle karein (Development vs Production)
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+  const message = `<h1>Password Reset</h1><p>Click here to reset:</p><a href="${resetUrl}">${resetUrl}</a>`;
+
+  try {
+    await transporter.sendMail({
+      from: `"Rao Sahab Wear" <${process.env.EMAIL_SERVICE_USER}>`,
+      to: user.email,
+      subject: "Password Reset Request",
+      html: message,
+    });
+    res.json({ success: true, data: "Email sent" });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    res.status(500);
+    throw new Error("Email could not be sent. Check backend logs.");
+  }
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.resetToken)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    res.status(400);
+    throw new Error("Invalid or Expired Token");
+  }
+
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  res.json({ success: true, message: "Password Updated Successfully" });
+});
+
+// ---------------------------------------------------------
+// 🟢 5. CART & ADDRESS HELPERS
+// ---------------------------------------------------------
 const updateUserCart = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-
   if (user) {
-    user.cart = req.body.cart; // Frontend se pura cart array aayega
+    user.cart = req.body.cart;
     await user.save();
     res.json(user.cart);
   } else {
@@ -232,9 +228,8 @@ const updateUserCart = asyncHandler(async (req, res) => {
 
 const getUserCart = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (user) {
-    res.json(user.cart);
-  } else {
+  if (user) res.json(user.cart);
+  else {
     res.status(404);
     throw new Error("User not found");
   }
@@ -242,26 +237,19 @@ const getUserCart = asyncHandler(async (req, res) => {
 
 const addAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-
   if (user) {
-    const address = req.body; // Frontend se pura address object aayega
-    user.addressList.push(address); // List mein add karo
+    user.addressList.push(req.body);
     await user.save();
-    res.status(201).json(user.addressList); // Updated list wapas bhejo
+    res.status(201).json(user.addressList);
   } else {
     res.status(404);
     throw new Error("User not found");
   }
 });
 
-// @desc    Delete address
-// @route   DELETE /api/users/address/:id
-// @access  Private
 const deleteAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-
   if (user) {
-    // Filter karke wo address hatao jiski ID match kare
     user.addressList = user.addressList.filter(
       (addr) => addr._id.toString() !== req.params.id
     );
@@ -273,26 +261,23 @@ const deleteAddress = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get all addresses
-// @route   GET /api/users/address
-// @access  Private
 const getAddresses = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (user) {
-    res.json(user.addressList);
-  } else {
+  if (user) res.json(user.addressList);
+  else {
     res.status(404);
     throw new Error("User not found");
   }
 });
+
+// ---------------------------------------------------------
+// 🟢 6. ADMIN CONTROLLERS
+// ---------------------------------------------------------
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({});
+  const users = await User.find({}).select("-password");
   res.json(users);
 });
 
-// @desc    Delete user
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
@@ -304,9 +289,6 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get user by ID
-// @route   GET /api/users/:id
-// @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select("-password");
   if (user) res.json(user);
@@ -316,9 +298,6 @@ const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Update user
-// @route   PUT /api/users/:id
-// @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
@@ -326,22 +305,18 @@ const updateUser = asyncHandler(async (req, res) => {
     user.email = req.body.email || user.email;
     user.role = req.body.role || user.role;
     const updatedUser = await user.save();
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      role: updatedUser.role,
-    });
+    res.json(updatedUser);
   } else {
     res.status(404);
     throw new Error("User not found");
   }
 });
+
 module.exports = {
   authUser,
   sendOtp,
   verifyOtp,
-  forgotPassword, // 🟢 NEW
+  forgotPassword,
   resetPassword,
   updateUserCart,
   getUserCart,
