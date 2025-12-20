@@ -53,18 +53,18 @@ const sendOtp = asyncHandler(async (req, res) => {
 
   // --- Email Sending with Timeout Protection ---
   const mailOptions = {
+    // यहाँ अपनी Brevo वाली ईमेल आईडी डालो
     from: `"Rao Sahab Wear" <${process.env.EMAIL_SERVICE_USER}>`,
     to: email,
     subject: "Rao Sahab Wear: OTP Verification",
     html: `
-      <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px;">
-        <h2 style="color: #333;">Email Verification</h2>
-        <p>Your 6-digit verification code is:</p>
-        <h1 style="color: #0BC5EA; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-        <p>This code is valid for 10 minutes.</p>
-        <p>If you didn't request this, ignore this email.</p>
-      </div>
-    `,
+    <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px;">
+      <h2 style="color: #333;">Email Verification</h2>
+      <p>Your 6-digit verification code is:</p>
+      <h1 style="color: #0BC5EA; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+      <p>This code is valid for 10 minutes.</p>
+    </div>
+  `,
   };
 
   try {
