@@ -56,7 +56,7 @@ import { useAuth } from "../../context/AuthContext";
 import Loader from "../../components/Utility/Loader";
 import EmptyState from "../../components/Utility/EmptyState";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const UserManager = () => {
   const { user: currentUser } = useAuth();

@@ -37,7 +37,7 @@ import Loader from "../components/Utility/Loader";
 import EmptyState from "../components/Utility/EmptyState";
 import AddressManager from "../components/Profile/AddressManager";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 // ---------------------------------------------------
 // 1. Profile Info Panel (Responsive)

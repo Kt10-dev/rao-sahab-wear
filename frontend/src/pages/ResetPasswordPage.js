@@ -15,7 +15,7 @@ import {
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");

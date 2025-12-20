@@ -40,7 +40,7 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import indiaData from "../data/states-and-districts.json";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 // 🟢 FIX 1: Framer Motion Deprecation Warning Fix
 const MotionBox = motion.create(Box);

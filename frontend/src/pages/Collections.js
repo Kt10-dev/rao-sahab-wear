@@ -18,7 +18,7 @@ import { Link as RouterLink } from "react-router-dom";
 import axios from "axios";
 import Loader from "../components/Utility/Loader";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
 const MotionText = motion(Text);

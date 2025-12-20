@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");

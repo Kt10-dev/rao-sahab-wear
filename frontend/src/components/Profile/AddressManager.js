@@ -36,7 +36,7 @@ import EmptyState from "../Utility/EmptyState"; // Assuming you have this compon
 // 🟢 Import JSON Data
 import indiaData from "../../data/states-and-districts.json";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const AddressManager = () => {
   const { user } = useAuth();

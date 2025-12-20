@@ -24,7 +24,7 @@ import { FaTrash, FaPlus, FaTags, FaCamera } from "react-icons/fa";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const CategoryManager = () => {
   const { user } = useAuth();

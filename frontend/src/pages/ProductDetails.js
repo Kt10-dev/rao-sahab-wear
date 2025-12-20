@@ -57,7 +57,7 @@ import EmptyState from "../components/Utility/EmptyState";
 import Rating from "../components/Utility/Rating";
 import ProductCard from "../components/ProductCard/ProductCard";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 // Motion Components
 const MotionBox = motion.create(Box);

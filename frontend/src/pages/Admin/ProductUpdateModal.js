@@ -46,7 +46,7 @@ import {
   FaRulerCombined,
 } from "react-icons/fa";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const ProductUpdateModal = ({
   isOpen,

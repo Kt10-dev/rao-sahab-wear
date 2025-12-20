@@ -25,7 +25,7 @@ import HeroSlider from "../components/Home/HeroSlider";
 
 const MotionBox = motion(chakra.div);
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 // ----------------- dummy featured (fallback) -----------------
 const dummyProductBase = {

@@ -24,7 +24,7 @@ const MotionIcon = motion.create(FaHeart);
 const MotionBox = motion.create(Box);
 
 // Backend URL
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const ProductCard = ({ product, glassmorphic }) => {
   // 🟢 HOOKS

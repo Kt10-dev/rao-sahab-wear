@@ -41,7 +41,7 @@ import EmptyState from "../components/Utility/EmptyState";
 import SidebarFilters from "../components/ProductsPage/SidebarFilters"; // 🟢 Ensure path is correct
 
 // ---------------- CONFIG ----------------
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 const MIN_PRICE = 0;
 const MAX_PRICE = 25000;
 const PAGE_SIZE = 9;

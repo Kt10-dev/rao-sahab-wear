@@ -54,7 +54,7 @@ import Loader from "../../components/Utility/Loader";
 import EmptyState from "../../components/Utility/EmptyState";
 import OrderDetailsModal from "./OrderDetailsModal"; // 🟢 Ensure import is correct
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const OrderManager = () => {
   const { user } = useAuth();

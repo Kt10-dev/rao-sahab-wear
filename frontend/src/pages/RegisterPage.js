@@ -27,7 +27,7 @@ import { useAuth } from "../context/AuthContext";
 // Import Rive Component
 import RiveYeti from "../components/RiveYeti";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const MotionBox = motion(Box);
 const MotionHeading = motion(Heading);
