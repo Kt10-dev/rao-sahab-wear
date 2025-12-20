@@ -3,7 +3,7 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
-const transporter = require("../config/email");
+const sendEmail = require("../config/email"); // 🟢 अब यह सीधा फंक्शन है
 const crypto = require("crypto");
 
 // ---------------------------------------------------------
@@ -19,7 +19,6 @@ const generateOtp = () => {
 const sendOtp = asyncHandler(async (req, res) => {
   const { name, email, password, role = "user" } = req.body;
 
-  // Check if user already exists and is verified
   const userExists = await User.findOne({ email, isVerified: true });
   if (userExists) {
     res.status(400);
@@ -27,19 +26,17 @@ const sendOtp = asyncHandler(async (req, res) => {
   }
 
   const otp = generateOtp();
-  const otpExpires = Date.now() + 10 * 60 * 1000; // 10 Min Expiry
+  const otpExpires = Date.now() + 10 * 60 * 1000;
 
   let user = await User.findOne({ email });
 
   if (user) {
-    // Unverified user exists, update details
     user.name = name;
-    user.password = password; // Pre-save hook will hash this
+    user.password = password;
     user.otp = otp;
     user.otpExpires = otpExpires;
     await user.save();
   } else {
-    // Create new unverified user
     user = await User.create({
       name,
       email,
@@ -51,43 +48,32 @@ const sendOtp = asyncHandler(async (req, res) => {
     });
   }
 
-  // --- Email Sending with Timeout Protection ---
-  const mailOptions = {
-    // यहाँ अपनी Brevo वाली ईमेल आईडी डालो
-    from: `"Rao Sahab Wear" <${process.env.EMAIL_SERVICE_USER}>`,
-    to: email,
-    subject: "Rao Sahab Wear: OTP Verification",
-    html: `
-    <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px;">
-      <h2 style="color: #333;">Email Verification</h2>
-      <p>Your 6-digit verification code is:</p>
-      <h1 style="color: #0BC5EA; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-      <p>This code is valid for 10 minutes.</p>
-    </div>
-  `,
-  };
-
+  // --- Email Sending via Brevo API ---
   try {
-    // 💡 Render Timeout Hack: Wait max 12 seconds for email
-    const sendMailPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("SMTP Timeout")), 12000)
-    );
-
-    await Promise.race([sendMailPromise, timeoutPromise]);
+    await sendEmail({
+      to: email,
+      subject: "Rao Sahab Wear: OTP Verification",
+      htmlContent: `
+        <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f9f9f9;">
+          <h2 style="color: #333;">Welcome to Rao Sahab Wear</h2>
+          <p>Your 6-digit verification code is:</p>
+          <h1 style="color: #0BC5EA; letter-spacing: 5px;">${otp}</h1>
+          <p>Valid for 10 minutes.</p>
+        </div>
+      `,
+    });
 
     res.json({
       success: true,
       message: "OTP sent successfully to your email.",
     });
   } catch (error) {
-    console.error("❌ Email Error catch block:", error.message);
-    // 💡 Rao Sahab Hack: We send success even if email times out
-    // because OTP is already saved in DB. User can try again or check spam.
+    console.error("❌ API Email Error:", error.message);
+    // 💡 Rao Sahab Pro Tip: Still sending success because OTP is in DB
     res.status(200).json({
       success: true,
-      message: "Processing... Please check your inbox or spam in a moment.",
-      error: "Email delivery delayed",
+      message: "Please check your inbox or spam in a moment.",
+      warning: "Email server delayed",
     });
   }
 });
@@ -135,7 +121,6 @@ const authUser = asyncHandler(async (req, res) => {
       res.status(401);
       throw new Error("Account not verified. Please verify your email first.");
     }
-
     res.json({
       _id: user._id,
       name: user.name,
@@ -164,18 +149,14 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.getResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  // LIVE URL handle karein (Development vs Production)
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-  const message = `<h1>Password Reset</h1><p>Click here to reset:</p><a href="${resetUrl}">${resetUrl}</a>`;
-
   try {
-    await transporter.sendMail({
-      from: `"Rao Sahab Wear" <${process.env.EMAIL_SERVICE_USER}>`,
+    await sendEmail({
       to: user.email,
       subject: "Password Reset Request",
-      html: message,
+      htmlContent: `<h1>Password Reset</h1><p>Click here to reset:</p><a href="${resetUrl}">${resetUrl}</a>`,
     });
     res.json({ success: true, data: "Email sent" });
   } catch (error) {

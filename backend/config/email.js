@@ -1,23 +1,37 @@
 // backend/config/email.js
-const nodemailer = require("nodemailer");
+const SibApiV3Sdk = require("@getbrevo/brevo");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // Brevo के लिए 587 + false सबसे बेस्ट है
-  auth: {
-    user: process.env.EMAIL_SERVICE_USER,
-    pass: process.env.EMAIL_SERVICE_PASS,
-  },
-});
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-// Verification check
-transporter.verify((error) => {
-  if (error) {
-    console.log("❌ Brevo Connection Error:", error.message);
-  } else {
-    console.log("✅ SYSTEM READY: Emails are flying via Brevo, Rao Sahab!");
+// API Key कॉन्फ़िगर करें
+const apiKey = SibApiV3Sdk.ApiClient.instance.authentications["api-key"];
+apiKey.apiKey = process.env.EMAIL_SERVICE_PASS; // यहाँ अपनी Brevo API Key डालना
+
+const sendEmail = async ({ to, subject, htmlContent }) => {
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.htmlContent = htmlContent;
+  sendSmtpEmail.sender = {
+    name: "Rao Sahab Wear",
+    email: process.env.EMAIL_SERVICE_USER,
+  };
+  sendSmtpEmail.to = [{ email: to }];
+
+  try {
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(
+      "✅ API Success: Email sent via Brevo API. ID:",
+      data.messageId
+    );
+    return data;
+  } catch (error) {
+    console.error(
+      "❌ Brevo API Error:",
+      error.response ? error.response.body : error.message
+    );
+    throw new Error("Email sending failed");
   }
-});
+};
 
-module.exports = transporter;
+module.exports = sendEmail;
