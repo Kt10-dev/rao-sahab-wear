@@ -4,7 +4,7 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 
-const transporter = require("../config/email");
+const sendEmail = require("../config/email");
 
 // Instance initialize karein
 const razorpay = new Razorpay({
