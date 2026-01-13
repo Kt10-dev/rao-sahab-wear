@@ -34,7 +34,7 @@ import { Link as RouterLink } from "react-router-dom";
 import Loader from "../../components/Utility/Loader";
 import EmptyState from "../../components/Utility/EmptyState";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://raosahab-api.onrender.com";
 const MotionBox = motion(Box);
 const MotionButton = motion(Button);
 

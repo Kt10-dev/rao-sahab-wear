@@ -1,3 +1,4 @@
+// backend/models/Product.js
 const mongoose = require("mongoose");
 
 // 🟢 1. Review Schema (Embedded)
@@ -32,13 +33,11 @@ const productSchema = mongoose.Schema(
       trim: true,
     },
 
-    // 🟢 SEO Slug (Auto-generated via Pre-save hook)
     slug: {
       type: String,
       unique: true,
       lowercase: true,
       index: true,
-      // required: true, // ⚠️ Hata diya taaki Validation Error na aaye, hook isse bhar dega
     },
 
     category: {
@@ -52,8 +51,6 @@ const productSchema = mongoose.Schema(
       required: true,
     },
 
-    // 🟢 IMAGES Array of Objects
-    // NOTE: Controller me ensure karein ki aap { url: "..." } format bhej rahe hain
     images: [
       {
         url: { type: String, required: true },
@@ -65,7 +62,6 @@ const productSchema = mongoose.Schema(
     price: { type: Number, required: true, default: 0 },
     countInStock: { type: Number, required: true, default: 0 },
 
-    // 🟢 Advanced Variations
     variations: [
       {
         color: { type: String },
@@ -76,8 +72,16 @@ const productSchema = mongoose.Schema(
       },
     ],
 
-    // Simple Filters
-    colors: [{ type: String }],
+    // 🟢 FIXED: Colors now accepts Objects (Name, Hex, Image)
+    colors: [
+      {
+        name: { type: String },
+        hex: { type: String },
+        image: { type: String },
+      },
+    ],
+
+    // Sizes typically remain strings (S, M, L, XL)
     sizes: [{ type: String }],
 
     reviews: [reviewSchema],
@@ -102,16 +106,16 @@ const productSchema = mongoose.Schema(
   }
 );
 
-// 🟢🟢 MAGIC FIX: Slug Generator Hook 🟢🟢
-// Ye code save hone se pehle chalega aur Name se Slug bana dega
-productSchema.pre("save", async function () {
+// 🟢 Slug Generator Hook
+productSchema.pre("save", async function (next) {
   if (!this.slug && this.name) {
     this.slug = this.name
       .toLowerCase()
       .trim()
-      .replace(/ /g, "-") // Spaces ko - banaye
-      .replace(/[^\w-]+/g, ""); // Special chars hataye
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
   }
+  next(); // 👈 Call next() to proceed
 });
 
 const Product = mongoose.model("Product", productSchema);
