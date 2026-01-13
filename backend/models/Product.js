@@ -115,7 +115,6 @@ productSchema.pre("save", async function (next) {
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
   }
-  next(); // 👈 Call next() to proceed
 });
 
 const Product = mongoose.model("Product", productSchema);
