@@ -16,13 +16,13 @@ import Slider from "react-slick";
 import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
 
-// Slider CSS (Import zaroori hai)
+// Slider CSS
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
+// 🟢 पक्का करें कि ये लिंक सही है
 const API_BASE_URL = "https://raosahab-api.onrender.com";
 
-// Settings for the slider
 const settings = {
   dots: true,
   arrows: false,
@@ -39,33 +39,43 @@ const HeroSlider = () => {
   const [slider, setSlider] = useState(null);
   const [banners, setBanners] = useState([]);
 
-  // Responsive Height
+  // Responsive values (फंक्शन के अंदर रखना बेस्ट है)
   const height = useBreakpointValue({ base: "400px", md: "600px" });
+  const side = useBreakpointValue({ base: "10px", md: "40px" });
+  const top = "50%";
 
-  // 1. Fetch Banners
   useEffect(() => {
     const fetchBanners = async () => {
       try {
+        // 🟢 सीधा लिंक यूज़ कर रहे हैं ताकि Localhost का लफड़ा ही न रहे
         const { data } = await axios.get(`${API_BASE_URL}/api/banners`);
-        setBanners(data);
+        if (data && data.length > 0) {
+          setBanners(data);
+        }
       } catch (error) {
-        console.log("No banners found, using default.");
+        console.warn("API Banners not found, using defaults.");
       }
     };
     fetchBanners();
   }, []);
 
-  // 2. Fallback (Agar Admin ne koi banner nahi dala)
-  const defaultBanner = [
+  // Default Banners (अगर बैकएंड से डेटा न आए)
+  const defaultBanners = [
     {
       image:
         "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070",
       title: "RAO SAHAB WEAR",
-      link: "/products",
+      link: "/shop",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=1887",
+      title: "PREMIUM COLLECTION",
+      link: "/shop",
     },
   ];
 
-  const cards = banners.length > 0 ? banners : defaultBanner;
+  const cards = banners.length > 0 ? banners : defaultBanners;
 
   return (
     <Box
@@ -74,12 +84,16 @@ const HeroSlider = () => {
       width={"full"}
       overflow={"hidden"}
     >
-      {/* CSS Fix for Dots */}
+      {/* Dots Styling */}
       <style>
-        {`.slick-dots li button:before { color: white; font-size: 12px; } .slick-dots li.slick-active button:before { color: cyan; }`}
+        {`
+          .slick-dots { bottom: 25px; }
+          .slick-dots li button:before { color: white !important; font-size: 12px; }
+          .slick-dots li.slick-active button:before { color: #00FFFF !important; }
+        `}
       </style>
 
-      {/* Left Icon */}
+      {/* Left Arrow */}
       <IconButton
         aria-label="left-arrow"
         variant="ghost"
@@ -95,7 +109,7 @@ const HeroSlider = () => {
         <BiLeftArrowAlt size="40px" />
       </IconButton>
 
-      {/* Right Icon */}
+      {/* Right Arrow */}
       <IconButton
         aria-label="right-arrow"
         variant="ghost"
@@ -111,8 +125,8 @@ const HeroSlider = () => {
         <BiRightArrowAlt size="40px" />
       </IconButton>
 
-      {/* Slider */}
-      <Slider {...settings} ref={(slider) => setSlider(slider)}>
+      {/* Main Slider */}
+      <Slider {...settings} ref={(s) => setSlider(s)}>
         {cards.map((card, index) => (
           <Box
             key={index}
@@ -123,14 +137,14 @@ const HeroSlider = () => {
             backgroundSize="cover"
             backgroundImage={`url(${card.image})`}
           >
-            {/* Overlay Gradient (Text readable banane ke liye) */}
+            {/* Overlay */}
             <Box
               position="absolute"
               top="0"
               left="0"
               w="full"
               h="full"
-              bgGradient="linear(to-r, blackAlpha.700, transparent)"
+              bgGradient="linear(to-r, blackAlpha.800, transparent)"
             />
 
             <Container
@@ -152,25 +166,25 @@ const HeroSlider = () => {
                   color="white"
                   fontWeight="bold"
                   textTransform="uppercase"
+                  lineHeight={1.2}
                 >
-                  {card.title || "New Collection"}
+                  {card.title}
                 </Heading>
-
-                {card.link && (
-                  <Button
-                    as={RouterLink}
-                    to={card.link}
-                    bg={"cyan.400"}
-                    rounded={"full"}
-                    color={"white"}
-                    _hover={{ bg: "cyan.500", transform: "scale(1.05)" }}
-                    w="fit-content"
-                    px={8}
-                    size="lg"
-                  >
-                    Shop Now
-                  </Button>
-                )}
+                <Button
+                  as={RouterLink}
+                  to={card.link || "/shop"}
+                  bg={"cyan.400"}
+                  rounded={"full"}
+                  color={"white"}
+                  _hover={{ bg: "cyan.500", transform: "scale(1.05)" }}
+                  w="fit-content"
+                  px={10}
+                  size="lg"
+                  textTransform="uppercase"
+                  fontWeight="bold"
+                >
+                  Shop Now
+                </Button>
               </Stack>
             </Container>
           </Box>
@@ -179,9 +193,5 @@ const HeroSlider = () => {
     </Box>
   );
 };
-
-// Positioning Constants
-const top = "50%";
-const side = "10px";
 
 export default HeroSlider;
