@@ -37,10 +37,11 @@ import Loader from "../components/Utility/Loader";
 import EmptyState from "../components/Utility/EmptyState";
 import AddressManager from "../components/Profile/AddressManager";
 
+// 🟢 LIVE API URL
 const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 // ---------------------------------------------------
-// 1. Profile Info Panel (Responsive)
+// 1. Profile Info Panel
 // ---------------------------------------------------
 const ProfileInfo = ({ user, handleLogout }) => {
   const cardBg = useColorModeValue("white", "gray.700");
@@ -50,7 +51,7 @@ const ProfileInfo = ({ user, handleLogout }) => {
     <VStack
       align="start"
       spacing={4}
-      p={{ base: 4, md: 6 }} // Less padding on mobile
+      p={{ base: 4, md: 6 }}
       borderRadius="lg"
       bg={cardBg}
       boxShadow={cardShadow}
@@ -71,13 +72,12 @@ const ProfileInfo = ({ user, handleLogout }) => {
       </Box>
       <Divider />
 
-      {/* Responsive Buttons: Stack on mobile, Row on desktop */}
       <Stack direction={{ base: "column", sm: "row" }} spacing={4} w="full">
         <Button
           leftIcon={<FaEdit />}
           colorScheme="blue"
           size="sm"
-          w={{ base: "full", sm: "auto" }} // Full width on mobile
+          w={{ base: "full", sm: "auto" }}
         >
           Edit Profile
         </Button>
@@ -97,7 +97,7 @@ const ProfileInfo = ({ user, handleLogout }) => {
 };
 
 // ---------------------------------------------------
-// 2. Order History Panel (Responsive Cards)
+// 2. Order History Panel
 // ---------------------------------------------------
 const OrderHistory = ({ user }) => {
   const [orders, setOrders] = useState([]);
@@ -141,7 +141,7 @@ const OrderHistory = ({ user }) => {
         description="You haven't placed any orders yet. Start shopping!"
         iconName="box"
         ctaText="Browse Products"
-        ctaLink="/products"
+        ctaLink="/shop" // 🟢 Fixed Link
       />
     );
   }
@@ -155,13 +155,13 @@ const OrderHistory = ({ user }) => {
       {orders.map((order) => (
         <Stack
           key={order._id}
-          direction={{ base: "column", md: "row" }} // 🟢 Mobile: Column, Desktop: Row
+          direction={{ base: "column", md: "row" }}
           p={{ base: 4, md: 5 }}
           borderRadius="lg"
           bg={cardBg}
           boxShadow={cardShadow}
           justify="space-between"
-          align={{ base: "start", md: "center" }} // Mobile: Left align, Desktop: Center align
+          align={{ base: "start", md: "center" }}
           _hover={{
             bg: hoverBg,
             transform: "translateY(-2px)",
@@ -171,7 +171,6 @@ const OrderHistory = ({ user }) => {
           borderColor={useColorModeValue("gray.200", "gray.600")}
           spacing={{ base: 4, md: 0 }}
         >
-          {/* Left Side: Info */}
           <VStack align="start" spacing={1} w="full">
             <Text fontWeight="bold" fontSize={{ base: "md", md: "lg" }}>
               Order #{order._id.substring(0, 10).toUpperCase()}...
@@ -188,9 +187,8 @@ const OrderHistory = ({ user }) => {
             </Text>
           </VStack>
 
-          {/* Right Side: Price & Actions */}
           <VStack
-            align={{ base: "start", md: "end" }} // Mobile: Left, Desktop: Right
+            align={{ base: "start", md: "end" }}
             spacing={2}
             w={{ base: "full", md: "auto" }}
           >
@@ -199,23 +197,24 @@ const OrderHistory = ({ user }) => {
             </Text>
 
             <Flex gap={2} wrap="wrap">
-              {/* Paid Status */}
               <Badge colorScheme={order.isPaid ? "green" : "red"}>
                 {order.isPaid ? "PAID" : "NOT PAID"}
               </Badge>
-              {/* Delivery Status */}
               <Badge colorScheme={order.isDelivered ? "green" : "orange"}>
                 {order.isDelivered ? "DELIVERED" : "PROCESSING"}
               </Badge>
             </Flex>
 
+            {/* 🟢 Fixed Link to Order Details */}
             <Button
+              as={RouterLink}
+              to={`/order/${order._id}`}
               size="xs"
               variant="outline"
               colorScheme="blue"
               w={{ base: "full", md: "auto" }}
             >
-              View Receipt
+              View Details
             </Button>
           </VStack>
         </Stack>
@@ -233,8 +232,6 @@ const UserProfile = () => {
   const toast = useToast();
 
   const bg = useColorModeValue("gray.50", "gray.900");
-  const cardBg = useColorModeValue("white", "gray.700");
-  const cardShadow = useColorModeValue("md", "dark-lg");
 
   const handleLogout = () => {
     logout();
@@ -268,19 +265,18 @@ const UserProfile = () => {
       px={{ base: 4, md: 8 }}
     >
       <Box maxW="1200px" mx="auto">
-        {/* Header Section */}
         <Stack
-          direction={{ base: "column", md: "row" }} // Stack on mobile
+          direction={{ base: "column", md: "row" }}
           spacing={{ base: 4, md: 10 }}
           mb={8}
           align="center"
           justify={{ base: "center", md: "start" }}
           textAlign={{ base: "center", md: "left" }}
         >
+          {/* 🟢 Removed broken 'src' to fix 404 error */}
           <Avatar
             size={{ base: "xl", md: "2xl" }}
             name={user?.name}
-            src="https://bit.ly/dan-abramov"
             boxShadow="lg"
           />
           <Box>
@@ -294,7 +290,6 @@ const UserProfile = () => {
         </Stack>
 
         <Tabs isLazy colorScheme="blue" variant="enclosed">
-          {/* Scrollable Tabs for Mobile */}
           <TabList
             overflowX="auto"
             overflowY="hidden"

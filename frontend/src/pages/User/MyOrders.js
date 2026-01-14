@@ -34,7 +34,9 @@ import { Link as RouterLink } from "react-router-dom";
 import Loader from "../../components/Utility/Loader";
 import EmptyState from "../../components/Utility/EmptyState";
 
+// 🟢 LIVE API URL - सुनिश्चित करें कि यहाँ localhost न हो
 const API_BASE_URL = "https://raosahab-api.onrender.com";
+
 const MotionBox = motion(Box);
 const MotionButton = motion(Button);
 
@@ -49,19 +51,19 @@ const TrackingModal = ({ isOpen, onClose, trackingData }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
       <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(5px)" />
-      <ModalContent borderRadius="xl">
+      <ModalContent borderRadius="xl" bg="gray.800" color="white">
         <ModalHeader>Tracking Details 🚚</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
           <VStack align="stretch" spacing={4}>
             <Box
               p={3}
-              bg="blue.50"
+              bg="whiteAlpha.100"
               borderRadius="md"
               border="1px dashed"
-              borderColor="blue.300"
+              borderColor="cyan.300"
             >
-              <Text fontWeight="bold" color="blue.700">
+              <Text fontWeight="bold" color="cyan.300">
                 Status: {currentStatus}
               </Text>
               <Text fontSize="sm">
@@ -85,9 +87,9 @@ const TrackingModal = ({ isOpen, onClose, trackingData }) => {
                       />
                     </StepIndicator>
                     <Box flexShrink="0">
-                      <StepTitle>{activity.activity}</StepTitle>
-                      <StepDescription>
-                        {activity.location} <br />{" "}
+                      <StepTitle fontSize="sm">{activity.activity}</StepTitle>
+                      <StepDescription fontSize="xs" color="gray.400">
+                        {activity.location} <br />
                         {new Date(activity.date).toLocaleString()}
                       </StepDescription>
                     </Box>
@@ -123,7 +125,13 @@ const MyOrders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        if (!user || !user.token) return;
+
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
+
+        // 🔍 Debugging के लिए:
+        console.log(`Fetching from: ${API_BASE_URL}/api/orders/myorders`);
+
         const { data } = await axios.get(
           `${API_BASE_URL}/api/orders/myorders`,
           config
@@ -131,7 +139,8 @@ const MyOrders = () => {
         setOrders(data);
         setLoading(false);
       } catch (err) {
-        setError("Failed to load orders.");
+        console.error("Fetch Orders Error:", err);
+        setError("Failed to load orders. Please check your connection.");
         setLoading(false);
       }
     };
@@ -189,7 +198,6 @@ const MyOrders = () => {
     }
   };
 
-  // 🟢 Helper for Status Color
   const getStatusColor = (status) => {
     switch (status) {
       case "Delivered":
@@ -197,16 +205,22 @@ const MyOrders = () => {
       case "Shipped":
         return "purple";
       case "Packed":
-        return "blue"; // Packed ke liye Blue color
+        return "blue";
       case "Cancelled":
         return "red";
       default:
-        return "orange"; // Processing etc.
+        return "orange";
     }
   };
 
   if (loading) return <Loader message="Loading orders..." size="md" />;
-  if (error) return <Text color="red.500">{error}</Text>;
+  if (error)
+    return (
+      <Box p={10} textAlign="center">
+        <Text color="red.400">{error}</Text>
+      </Box>
+    );
+
   if (orders.length === 0)
     return (
       <EmptyState
@@ -217,7 +231,7 @@ const MyOrders = () => {
     );
 
   return (
-    <VStack align="stretch" spacing={6} w="full">
+    <VStack align="stretch" spacing={6} w="full" px={{ base: 2, md: 0 }}>
       {orders.map((order) => (
         <MotionBox
           key={order._id}
@@ -250,13 +264,18 @@ const MyOrders = () => {
 
           <HStack justify="space-between" flexWrap="wrap" gap={4}>
             <HStack spacing={3}>
-              <Badge colorScheme={order.isPaid ? "green" : "red"}>
+              <Badge
+                colorScheme={order.isPaid ? "green" : "red"}
+                borderRadius="full"
+                px={3}
+              >
                 {order.isPaid ? "PAID" : "NOT PAID"}
               </Badge>
 
-              {/* 🟢 FIXED: Ab ye 'orderStatus' dikhayega (Packed/Shipped/etc) */}
               <Badge
                 colorScheme={getStatusColor(order.orderStatus || "Processing")}
+                borderRadius="full"
+                px={3}
               >
                 {order.orderStatus || "Processing"}
               </Badge>
@@ -282,6 +301,7 @@ const MyOrders = () => {
                 leftIcon={<FaTruck />}
                 onClick={() => handleTrackOrder(order._id)}
                 isLoading={trackLoading}
+                borderRadius="full"
               >
                 Track
               </MotionButton>
@@ -293,6 +313,7 @@ const MyOrders = () => {
                 colorScheme="cyan"
                 variant="outline"
                 leftIcon={<FaEye />}
+                borderRadius="full"
               >
                 Details
               </MotionButton>
