@@ -6,11 +6,10 @@ import {
   IconButton,
   useBreakpointValue,
   Heading,
-  Text,
   Button,
   Container,
   Stack,
-  Skeleton, // 🟢 लोडिंग के लिए
+  Skeleton,
 } from "@chakra-ui/react";
 import { BiLeftArrowAlt, BiRightArrowAlt } from "react-icons/bi";
 import Slider from "react-slick";
@@ -21,7 +20,7 @@ import { Link as RouterLink } from "react-router-dom";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
-// 🟢 ये पक्का करेगा कि रिक्वेस्ट हमेशा लाइव सर्वर पर जाए
+// 🟢 पक्का करें कि ये लिंक सही है (Render Backend URL)
 const API_BASE_URL = "https://raosahab-api.onrender.com";
 
 const settings = {
@@ -39,8 +38,9 @@ const settings = {
 const HeroSlider = () => {
   const [slider, setSlider] = useState(null);
   const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(true); // 🟢 लोडिंग स्टेट
+  const [loading, setLoading] = useState(true);
 
+  // Responsive values
   const height = useBreakpointValue({ base: "400px", md: "600px" });
   const side = useBreakpointValue({ base: "10px", md: "40px" });
   const top = "50%";
@@ -49,19 +49,14 @@ const HeroSlider = () => {
     const fetchBanners = async () => {
       try {
         setLoading(true);
-        // 🔍 Debugging के लिए कंसोल में चेक करो कि URL क्या जा रहा है
-        console.log("Fetching banners from:", `${API_BASE_URL}/api/banners`);
-
+        // 🔍 सीधा लाइव सर्वर से डेटा फेच कर रहे हैं
         const { data } = await axios.get(`${API_BASE_URL}/api/banners`);
 
         if (data && data.length > 0) {
           setBanners(data);
         }
       } catch (error) {
-        console.warn(
-          "API Banners failed, using defaults. Error:",
-          error.message
-        );
+        console.warn("Backend API not responding, showing default banners.");
       } finally {
         setLoading(false);
       }
@@ -69,6 +64,7 @@ const HeroSlider = () => {
     fetchBanners();
   }, []);
 
+  // Default Banners (Backup logic)
   const defaultBanners = [
     {
       image:
@@ -86,9 +82,13 @@ const HeroSlider = () => {
 
   const cards = banners.length > 0 ? banners : defaultBanners;
 
-  // 🟢 अगर डेटा लोड हो रहा है तो स्केलेटन दिखाओ
+  // 🟢 लोडिंग के समय स्केलेटन दिखाना प्रोफेशनल लगता है
   if (loading) {
-    return <Skeleton height={height} width="full" />;
+    return (
+      <Box height={height} width="full" overflow="hidden">
+        <Skeleton height="100%" width="100%" />
+      </Box>
+    );
   }
 
   return (
@@ -98,6 +98,7 @@ const HeroSlider = () => {
       width={"full"}
       overflow={"hidden"}
     >
+      {/* Custom Slick Dots Styling */}
       <style>
         {`
           .slick-dots { bottom: 25px; }
@@ -106,7 +107,7 @@ const HeroSlider = () => {
         `}
       </style>
 
-      {/* Navigation Buttons */}
+      {/* Left Arrow */}
       <IconButton
         aria-label="left-arrow"
         variant="ghost"
@@ -122,6 +123,7 @@ const HeroSlider = () => {
         <BiLeftArrowAlt size="40px" />
       </IconButton>
 
+      {/* Right Arrow */}
       <IconButton
         aria-label="right-arrow"
         variant="ghost"
@@ -137,7 +139,7 @@ const HeroSlider = () => {
         <BiRightArrowAlt size="40px" />
       </IconButton>
 
-      {/* Slider */}
+      {/* Main Slider Component */}
       <Slider {...settings} ref={(s) => setSlider(s)}>
         {cards.map((card, index) => (
           <Box
@@ -149,6 +151,7 @@ const HeroSlider = () => {
             backgroundSize="cover"
             backgroundImage={`url(${card.image})`}
           >
+            {/* Dark Overlay for Text Visibility */}
             <Box
               position="absolute"
               top="0"
