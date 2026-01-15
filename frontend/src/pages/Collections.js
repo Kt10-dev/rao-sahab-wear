@@ -129,7 +129,6 @@ const Collections = () => {
 
   return (
     <Box bg={bg} minH="100vh" pb={20}>
-      {/* Hero */}
       <Flex
         h={{ base: "40vh", md: "50vh" }}
         align="center"
@@ -148,7 +147,7 @@ const Collections = () => {
             fontWeight="bold"
             letterSpacing="4px"
           >
-            THE EDIT 2024
+            THE EDIT 2026
           </MotionText>
           <Heading color="white" fontSize={{ base: "4xl", md: "6xl" }}>
             CURATED COLLECTIONS
@@ -156,7 +155,6 @@ const Collections = () => {
         </VStack>
       </Flex>
 
-      {/* Grid */}
       <Container
         maxW="1400px"
         mt={-16}
