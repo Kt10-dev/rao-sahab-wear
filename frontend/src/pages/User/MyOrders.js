@@ -123,6 +123,7 @@ const MyOrders = () => {
   const [invoiceLoadingId, setInvoiceLoadingId] = useState(null);
 
   useEffect(() => {
+    console.log("USER DATA:", user);
     const fetchOrders = async () => {
       try {
         if (!user || !user.token) return;
