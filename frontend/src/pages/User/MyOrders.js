@@ -130,7 +130,6 @@ const MyOrders = () => {
 
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
 
-        // 🔍 Debugging के लिए:
         console.log(`Fetching from: ${API_BASE_URL}/api/orders/myorders`);
 
         const { data } = await axios.get(
