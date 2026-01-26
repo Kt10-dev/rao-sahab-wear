@@ -32,7 +32,8 @@ app.use(cors()); // Allow cross-origin requests
 app.use("/api/webhook", webhookRoutes);
 
 // बाकी सब Routes के लिए JSON parser
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // 🟢 4. Regular Routes Mount
 app.use("/api/upload", uploadRoutes);
