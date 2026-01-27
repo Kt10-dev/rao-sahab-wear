@@ -31,6 +31,7 @@
     "nodemailer": "^7.0.10",
     "pdfkit": "^0.17.2",
     "razorpay": "^2.9.6",
-    "recharts": "^3.5.1"
+    "recharts": "^3.5.1",
+    "twilio": "^5.12.0"
   }
 }

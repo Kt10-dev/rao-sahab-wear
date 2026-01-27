@@ -1,8 +1,7 @@
-// backend/controllers/orderController.js
-
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
-const sendEmail = require("../config/email"); // 🟢 Correctly imported the Brevo function
+const sendEmail = require("../config/email");
+const sendWhatsAppMessage = require("../utils/whatsapp");
 const {
   createShiprocketOrder,
   getShippingRate,
@@ -45,13 +44,16 @@ const addOrderItems = asyncHandler(async (req, res) => {
 
     const createdOrder = await order.save();
 
-    // Populate User Info for Shiprocket and Email
+    // Populate User Info for Shiprocket, Email and WhatsApp
     const fullOrder = await Order.findById(createdOrder._id).populate(
       "user",
-      "name email"
+      "name email",
     );
 
-    // 1. 🚀 Push to Shiprocket
+    const frontendUrl =
+      process.env.FRONTEND_URL || "https://raosahabji.netlify.app";
+
+    // 1. 🚀 Push to Shiprocket Integration
     try {
       const shiprocketResponse = await createShiprocketOrder(fullOrder);
       if (shiprocketResponse && shiprocketResponse.order_id) {
@@ -62,49 +64,45 @@ const addOrderItems = asyncHandler(async (req, res) => {
       }
     } catch (error) {
       console.log("❌ Shiprocket Integration Error:", error.message);
-      // We don't throw error here to ensure user gets the order confirmation
     }
 
-    // 2. 📧 Send Confirmation Email (Updated for Brevo SDK)
+    // 2. 📧 Brevo Confirmation Email
     if (fullOrder.user && fullOrder.user.email) {
-      const frontendUrl =
-        process.env.FRONTEND_URL || "https://rao-sahab-wears-oef9.vercel.app";
-
       const emailOptions = {
         to: fullOrder.user.email,
         subject: `Order Confirmed! Order #${createdOrder._id}`,
         htmlContent: `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; color: #1a202c;">
-                <h2 style="color: #0BC5EA;">राम-राम, ${
-                  fullOrder.user.name
-                }! 🎉</h2>
-                <p style="font-size: 16px;">We have received your order at <b>Rao Sahab Wear</b>. It is currently being processed and will be shipped soon.</p>
-                <div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0; color: #2d3748;">Order Summary</h3>
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 12px; max-width: 600px;">
+                <h2 style="color: #0BC5EA;">राम-राम, ${fullOrder.user.name}! 🎉</h2>
+                <p>We have received your order at <b>Rao Sahab Wear</b>.</p>
+                <div style="background-color: #f7fafc; padding: 15px; border-radius: 8px;">
                     <p><b>Order ID:</b> #${createdOrder._id}</p>
                     <p><b>Total Amount:</b> ₹${totalPrice}</p>
-                    <p><b>Payment Method:</b> ${paymentMethod}</p>
-                    <p><b>Status:</b> ${isPaid ? "Paid" : "Pending (COD)"}</p>
                 </div>
-                <div style="text-align: center; margin-top: 30px;">
-                    <a href="${frontendUrl}/order/${createdOrder._id}" 
-                       style="background: #0BC5EA; color: white; padding: 12px 30px; text-decoration: none; border-radius: 999px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(11, 197, 234, 0.3);">
-                       Track My Order
-                    </a>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${frontendUrl}/order/${createdOrder._id}" style="background: #0BC5EA; color: white; padding: 10px 25px; text-decoration: none; border-radius: 50px; font-weight: bold;">Track My Order</a>
                 </div>
-                <p style="margin-top: 40px; font-size: 12px; color: #718096; text-align: center;">
-                    If you have any questions, reply to this email. <br/> Rao Sahab Wear - Premium Ethnic Style.
-                </p>
             </div>
         `,
       };
 
       try {
-        // 🟢 Direct call to your sendEmail function (fixed the method error)
         await sendEmail(emailOptions);
-        console.log("✅ Confirmation Email Sent successfully!");
+        console.log("✅ Confirmation Email Sent!");
       } catch (err) {
         console.log("❌ Email Delivery Failed:", err.message);
+      }
+    }
+
+    // 🟢 3. 📱 WhatsApp Confirmation (New Implementation)
+    if (shippingAddress && shippingAddress.phone) {
+      const whatsappBody = `राम-राम, ${fullOrder.user.name}! 🎉\n\nराव साहब Wear पर आपका आर्डर #${createdOrder._id} कन्फर्म हो गया है।\n\n💰 Total: ₹${totalPrice}\n🚚 Status: जल्द ही रवाना होगा!\n\nआप यहाँ ट्रैक कर सकते हैं: ${frontendUrl}/order/${createdOrder._id}\n\nधन्यवाद, राव साहब Wear परिवार।`;
+
+      try {
+        await sendWhatsAppMessage(shippingAddress.phone, whatsappBody);
+        console.log("✅ Order Confirmation WhatsApp Sent!");
+      } catch (wsErr) {
+        console.log("❌ WhatsApp Notification Failed:", wsErr.message);
       }
     }
 
@@ -114,11 +112,10 @@ const addOrderItems = asyncHandler(async (req, res) => {
 
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
-// @access  Private
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate(
     "user",
-    "name email"
+    "name email",
   );
   if (order) {
     res.json(order);
@@ -130,7 +127,6 @@ const getOrderById = asyncHandler(async (req, res) => {
 
 // @desc    Update order to paid
 // @route   PUT /api/orders/:id/pay
-// @access  Private
 const updateOrderToPaid = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
@@ -154,12 +150,11 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
 
 // @desc    Update Order Status (Packed, Shipped, Delivered)
 // @route   PUT /api/orders/:id/deliver
-// @access  Private/Admin
 const updateOrderToDelivered = asyncHandler(async (req, res) => {
   const { status } = req.body;
   const order = await Order.findById(req.params.id).populate(
     "user",
-    "name email"
+    "name email",
   );
 
   if (order) {
@@ -220,7 +215,7 @@ const calculateShipping = asyncHandler(async (req, res) => {
     WAREHOUSE_PINCODE,
     pincode,
     0.5,
-    false
+    false,
   );
 
   const taxRate = 0.18;
@@ -279,18 +274,23 @@ const handleReturnRequest = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Handle Shiprocket Webhook
+// @desc    Handle Shiprocket Webhook & WhatsApp Updates
 const handleShiprocketWebhook = asyncHandler(async (req, res) => {
   const { current_status, order_id, awb } = req.body;
+  const frontendUrl =
+    process.env.FRONTEND_URL || "https://raosahabji.netlify.app";
 
   console.log(
     "🔔 Shiprocket Webhook Hit:",
     current_status,
     "for Order:",
-    order_id
+    order_id,
   );
 
-  const order = await Order.findOne({ shiprocketOrderId: order_id });
+  const order = await Order.findOne({ shiprocketOrderId: order_id }).populate(
+    "user",
+    "name",
+  );
 
   if (order) {
     let newStatus = order.orderStatus;
@@ -323,6 +323,18 @@ const handleShiprocketWebhook = asyncHandler(async (req, res) => {
       if (awb) order.awbCode = awb;
       await order.save();
       console.log(`✅ Order ${order._id} auto-updated to: ${newStatus}`);
+
+      // 🟢 📱 Send WhatsApp Status Update Alert
+      if (order.shippingAddress && order.shippingAddress.phone) {
+        const updateMsg = `नमस्ते राव साहब! 🙏\n\nखुशखबरी! आपके आर्डर #${order._id} का स्टेटस अब *${newStatus.toUpperCase()}* हो गया है। \n${awb ? `📦 Tracking ID: ${awb}` : ""}\n\nआप यहाँ ट्रैक कर सकते हैं: ${frontendUrl}/order/${order._id}\n\nजल्द ही आपके पास पहुँचेगा! 🚚`;
+
+        try {
+          await sendWhatsAppMessage(order.shippingAddress.phone, updateMsg);
+          console.log("✅ WhatsApp Status Update Sent!");
+        } catch (wsErr) {
+          console.log("❌ WhatsApp Status Update Failed:", wsErr.message);
+        }
+      }
     }
 
     res.status(200).json({ message: "Webhook received" });
