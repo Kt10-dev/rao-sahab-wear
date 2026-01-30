@@ -55,7 +55,7 @@ const resolveCategoryId = async (input) => {
 // @desc    Fetch all products with Search, Pagination & Category Filter
 // @route   GET /api/products
 const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8;
+  const pageSize = 50;
   const page = Number(req.query.pageNumber) || 1;
 
   // 1. Base Query (Search by Name)
@@ -97,7 +97,7 @@ const getProductById = asyncHandler(async (req, res) => {
   // Yahan bhi populate kar diya taaki details page par category name dikhe
   const product = await Product.findById(req.params.id).populate(
     "category",
-    "name"
+    "name",
   );
 
   if (product) res.json(product);
@@ -128,7 +128,7 @@ const createProduct = asyncHandler(async (req, res) => {
   if (!categoryId) {
     res.status(400);
     throw new Error(
-      `Invalid Category: '${category}'. Please select a valid category.`
+      `Invalid Category: '${category}'. Please select a valid category.`,
     );
   }
 
@@ -227,7 +227,7 @@ const createProductReview = asyncHandler(async (req, res) => {
 
   if (product) {
     const alreadyReviewed = product.reviews.find(
-      (r) => r.user.toString() === req.user._id.toString()
+      (r) => r.user.toString() === req.user._id.toString(),
     );
 
     if (alreadyReviewed) {
@@ -257,7 +257,7 @@ const createProductReview = asyncHandler(async (req, res) => {
       {
         $push: { reviews: review },
         $set: { rating: newRating, numReviews: newNumReviews },
-      }
+      },
     );
 
     res.status(201).json({ message: "Review added successfully" });
@@ -290,6 +290,20 @@ const getRelatedProducts = asyncHandler(async (req, res) => {
   }
 });
 
+const getAdminProducts = asyncHandler(async (req, res) => {
+  // हम यहाँ .find({}) यूज़ करेंगे बिना किसी limit या skip के
+  const products = await Product.find({})
+    .populate("category", "name") // कैटेगरी का नाम दिखाने के लिए
+    .sort({ createdAt: -1 }); // लेटेस्ट प्रॉडक्ट्स सबसे ऊपर
+
+  if (products) {
+    res.json(products);
+  } else {
+    res.status(404);
+    throw new Error("No products found for Admin");
+  }
+});
+
 module.exports = {
   getProducts,
   getProductById,
@@ -298,4 +312,5 @@ module.exports = {
   deleteProduct,
   createProductReview,
   getRelatedProducts,
+  getAdminProducts,
 };

@@ -10,11 +10,13 @@ const {
   deleteProduct,
   createProductReview,
   getRelatedProducts,
+  getAdminProducts,
 } = require("../controllers/productController");
 const { protect, admin } = require("../middleware/authMiddleware");
 
 router.route("/").get(getProducts).post(protect, admin, createProduct);
 router.route("/:id/related").get(getRelatedProducts);
+router.get("/admin", protect, admin, getAdminProducts);
 
 // '/:id' route for getting a single product
 router
